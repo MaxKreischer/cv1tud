@@ -66,6 +66,4 @@ function problem1()
 
   showimages(img1, img2)
 
-
-
 end
