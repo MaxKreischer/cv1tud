@@ -55,8 +55,20 @@ end
 
 # display two images in a single figure window
 function displayimages(img1::Array{Float64,3}, img2::Array{Float64,3})
-
-  # you may reuse your function from problem1 here
+  # Sources used for plot creation:
+  #https://stackoverflow.com/questions/35692507/plot-several-image-files-in-matplotlib-subplots
+  #And:
+  #https://github.com/gizmaa/Julia_Examples/blob/master/pyplot_subplot.jl
+  fig = figure("pyplot_subplot_column")
+  subplot(211)
+  PyPlot.imshow(img1)
+  title("Image with missing values")
+  PyPlot.axis("off")
+  subplot(212)
+  PyPlot.imshow(img2)
+  title("Image after filtering")
+  PyPlot.axis("off")
+  fig[:canvas][:draw]() # Update the figure
   return nothing
 end
 
@@ -73,11 +85,11 @@ function problem2()
 
   # merge raw Bayer
   img1 = makeimage(r,g,b)
-  PyPlot.imshow(img1)
+
   # interpolate Bayer
   #img2 = debayer(r,g,b)
 
   # display images
-  #displayimages(img1, img2)
+  displayimages(img1, img1)
   #return
 end
