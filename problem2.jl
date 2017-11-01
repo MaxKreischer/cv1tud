@@ -2,7 +2,9 @@ using Images  # Basic image processing functions
 using PyPlot
 using JLD
 
-
+# Helper functions:
+cast2Int(x) = convert(Int64, floor(x))
+castMat2Float(A) = convert(Array{Float64,2}, A)
 # Load the Bayer image from the provided .jld file
 function loadbayer()
   data = JLD.load("./bayerdata.jld", "bayerimg")
@@ -13,9 +15,6 @@ end
 # Separate the Bayer image into three images (one for each color channel), filling up all
 # unknown values with 0
 function separatebayer(data::Array{Float64,2})
-  # Helper functions:
-  cast2Int(x) = convert(Int64, floor(x))
-  castMat2Float(A) = convert(Array{Float64,2}, A)
   # From assigmnment PDF:
   # G R G R
   # B G B G
@@ -48,7 +47,22 @@ end
 
 # Interpolate missing color values using bilinear interpolation
 function debayer(r::Array{Float64,2}, g::Array{Float64,2}, b::Array{Float64,2})
+  # sources used:
+  # https://en.wikipedia.org/wiki/Bayer_filter#Demosaicing ,
+  # "Review of Bayer Pattern Color Filter Array (CFA)
+  #  Demosaicing with New Quality Assessment Algorithms" by
+  #  Robert A. Maschal Jr., S. Susan Young, Joe Reynolds, Keith Krapels,
+  #  Jonathan Fanning, and Ted Corbin
+  # green correlation kernel:
+  nrows, ncols = size(r)
+  kerG =      castMat2Float(0.25*[0 1 0; 1 4 1; 0 1 0])
+  kerC =      castMat2Float(0.25*[1 2 1; 2 4 2; 1 2 1])
 
+  imRed   =   Images.imfilter(r, kerC)
+  imGreen =   Images.imfilter(g, kerG)
+  imBlue  =   Images.imfilter(b, kerC)
+
+  image = makeimage(imRed, imGreen, imBlue)
   return image::Array{Float64,3}
 end
 
@@ -84,12 +98,16 @@ function problem2()
   r,g,b = separatebayer(data)
 
   # merge raw Bayer
-  img1 = makeimage(r,g,b)
-
+  nrows, ncols = size(r)
+  testZero = zeros(nrows, ncols)
+  imgRed = makeimage(r,testZero,testZero)
+  imgGreen = makeimage(testZero,g,testZero)
+  imgBlue = makeimage(testZero, testZero, b)
+  #PyPlot.imshow(imgBlue)
   # interpolate Bayer
-  #img2 = debayer(r,g,b)
-
+  img2 = debayer(r,g,b)
+  PyPlot.imshow(img2)
   # display images
-  displayimages(img1, img1)
+  #displayimages(img1, img1)
   #return
 end
