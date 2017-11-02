@@ -3,11 +3,19 @@ using PyPlot
 using JLD
 using Base.Test
 
+# Helper functions:
+cast2Int(x) = convert(Int64, floor(x))
+cast2Float(x) = convert(Float64, x)
+castMat2Float(A) = convert(Array{Float64,2}, A)
+castArr2Float(A) = convert(Array{Float64,1}, A)
 
 # Transform from Cartesian to homogeneous coordinates
 function cart2hom(points::Array{Float64,2})
-
-
+  # P =  p1x p2x p3x
+  #      p1y p2y p3y
+  #      p1z p2z p3z
+  nrows,ncols = size(points)
+  points_hom = vcat(points, ones(1, ncols))
   return points_hom::Array{Float64,2}
 end
 
@@ -15,42 +23,68 @@ end
 
 # Transform from homogeneous to Cartesian coordinates
 function hom2cart(points::Array{Float64,2})
-
+  nrows, ncols = size(points)
+  (nrows>2) ? (dim=2) : (dim=3)
+  points_cart = zeros(dim, ncols)
+  for col=1:ncols
+    points_cart[:, col] = points[1:dim, col]./points[dim+1, col]
+  end
   return points_cart::Array{Float64,2}
 end
 
 
 # Translation by v
 function gettranslation(v::Array{Float64,1})
-
+  @assert (size(v)==3) "Not a 3-d array of translations."
+  T = castMat2Float(diagm([1;1;1;1]))
+  for rows=1:3
+    T[rows,4] = v[rows]
+  end
   return T::Array{Float64,2}
 end
 
 
 # Rotation of d degrees around x axis
 function getxrotation(d::Int)
-
+  x = convert(Float64,d)*(pi/180.0)
+  Rx = [  1.0 0.0    0.0      0.0;
+          0.0 cos(x) -sin(x)  0.0;
+          0.0 sin(x) cos(x)   0.0;
+          0.0 0.0    0.0      1.0]
   return Rx::Array{Float64,2}
 end
 
 
 # Rotation of d degrees around y axis
 function getyrotation(d::Int)
-
+  y = convert(Float64,d)*(pi/180.0)
+  Ry = [  cos(y)  0.0 sin(y) 0.0;
+          0.0     1.0 0.0    0.0;
+          -sin(y) 0.0 cos(y) 0.0;
+          0.0     0.0 0.0    1.0]
   return Ry::Array{Float64,2}
 end
 
 
 # Rotation of d degrees around z axis
 function getzrotation(d::Int)
-
+  z = convert(Float64,d)*(pi/180.0)
+  Rz = [  cos(z) -sin(z) 0.0 0.0;
+          sin(z) cos(z)  0.0 0.0;
+          0.0    0.0     1.0 0.0;
+          0.0    0.0     0.0 1.0]
   return Rz::Array{Float64,2}
 end
 
 
 # Central projection matrix (including camera intrinsics)
 function getcentralprojection(principal::Array{Int,1}, focal::Int)
-
+  f = cast2Float(focal)
+  pp =  castArr2Float(principal)
+  K =          [f   0.0 pp[1] 0.0 ;
+                0.0 f   pp[2] 0.0;
+                0.0 0.0 1.0   0.0;
+                0.0 0.0 0.0   1.0]
   return K::Array{Float64,2}
 end
 
@@ -64,14 +98,14 @@ end
 
 # Load 2D points
 function loadpoints()
-
+  points = JLD.load("obj2d.jld", "x")
   return points::Array{Float64,2}
 end
 
 
 # Load z-coordinates
 function loadz()
-
+  z = JLD.load("zs.jld", "Z")
   return z::Array{Float64,2}
 end
 

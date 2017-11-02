@@ -55,12 +55,15 @@ function debayer(r::Array{Float64,2}, g::Array{Float64,2}, b::Array{Float64,2})
   #  Jonathan Fanning, and Ted Corbin
   # green correlation kernel:
   nrows, ncols = size(r)
-  kerG =      castMat2Float(0.25*[0 1 0; 1 4 1; 0 1 0])
-  kerC =      castMat2Float(0.25*[1 2 1; 2 4 2; 1 2 1])
+  #kerG  =      castMat2Float(0.25*[0 1 0; 1 4 1; 0 1 0])
+  #kerC  =      castMat2Float(0.25*[1 2 1; 2 4 2; 1 2 1])
 
-  imRed   =   Images.imfilter(r, kerC)
-  imGreen =   Images.imfilter(g, kerG)
-  imBlue  =   Images.imfilter(b, kerC)
+  #imRed   =   r + Images.imfilter(r, kerNN)
+  #imGreen =   g+ Images.imfilter(g, kerNN)
+  #imBlue  =   b + Images.imfilter(b, kerNN)
+  rFilt = zeros(nrows,ncols)
+  gFilt = zeros(nrows,ncols)
+  bFilt = zeros(nrows,ncols)
 
   image = makeimage(imRed, imGreen, imBlue)
   return image::Array{Float64,3}
@@ -103,11 +106,11 @@ function problem2()
   imgRed = makeimage(r,testZero,testZero)
   imgGreen = makeimage(testZero,g,testZero)
   imgBlue = makeimage(testZero, testZero, b)
-  #PyPlot.imshow(imgBlue)
+
   # interpolate Bayer
-  img2 = debayer(r,g,b)
-  PyPlot.imshow(img2)
+  #img2 = debayer(r,g,b)
+  #PyPlot.imshow(img2)
   # display images
   #displayimages(img1, img1)
-  #return
+  return
 end
