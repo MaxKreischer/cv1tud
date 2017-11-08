@@ -119,7 +119,7 @@ function invertprojection(P::Array{Float64,2}, P2d::Array{Float64,2}, z::Array{F
   P3d = cart2hom(P2d)
   _,ncols = size(P3d)
 
-  f = 1.0/P[1,1]
+  f =  P[1,1]
   px = P[1,3]
   py = P[2,3]
   iP = [1.0/f 0.0 -px/f; 0.0 1.0/f -py/f; 0.0 0.0 1.0]
