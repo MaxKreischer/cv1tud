@@ -58,15 +58,33 @@ function debayer(r::Array{Float64,2}, g::Array{Float64,2}, b::Array{Float64,2})
   #kerG  =      castMat2Float(0.25*[0 1 0; 1 4 1; 0 1 0])
   #kerC  =      castMat2Float(0.25*[1 2 1; 2 4 2; 1 2 1])
 
+  gNew = zeros(nrows,ncols)
+
+  temp = 0.0
+  for rows = 2 : nrows-1
+      (rows%2 == 0)?(x = 3):(x = 2)
+      for cols = x : 2 : ncols-1
+        if (rows < nrows) & (cols< ncols)
+          temp = g[rows-1, cols] + g[rows, cols-1] + g[rows, cols+1] + g[rows+1, cols]
+        end
+        temp = temp*0.25
+        gNew[rows, cols] = temp
+      end
+  end
+
+
   #imRed   =   r + Images.imfilter(r, kerNN)
   #imGreen =   g+ Images.imfilter(g, kerNN)
   #imBlue  =   b + Images.imfilter(b, kerNN)
-  rFilt = zeros(nrows,ncols)
-  gFilt = zeros(nrows,ncols)
-  bFilt = zeros(nrows,ncols)
+  #rFilt = zeros(nrows,ncols)
+  #gFilt = zeros(nrows,ncols)
+  #bFilt = zeros(nrows,ncols)
 
-  image = makeimage(imRed, imGreen, imBlue)
-  return image::Array{Float64,3}
+
+
+  #image = makeimage(imRed, imGreen, imBlue)
+  return  gNew
+  #image::Array{Float64,3}
 end
 
 
@@ -107,10 +125,11 @@ function problem2()
   imgGreen = makeimage(testZero,g,testZero)
   imgBlue = makeimage(testZero, testZero, b)
 
+  PyPlot.imshow(b, cmap="gray")
   # interpolate Bayer
-  #img2 = debayer(r,g,b)
+  img2 = debayer(r,g,b)
   #PyPlot.imshow(img2)
   # display images
   #displayimages(img1, img1)
-  return
+  return r,g,b,img2
 end
