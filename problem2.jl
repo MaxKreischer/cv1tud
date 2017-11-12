@@ -210,14 +210,15 @@ function problem2()
   imgGreen = makeimage(testZero,g,testZero)
   imgBlue = makeimage(testZero, testZero, b)
 
-  PyPlot.imshow(b, cmap="gray")
+  #PyPlot.imshow(b, cmap="gray")
+  img1 = makeimage(r,g,b)
   # interpolate Bayer
   img2 = debayer(r,g,b)
   #zeroed, interpolatedd = debayer(r,g,b)
 
-  PyPlot.imshow(img2)
+  #PyPlot.imshow(img2, interpolation="none")
   # display images
-  #displayimages(img1, img1)
+  displayimages(img1,img2)
   #BoundsTester = zeroBounds(g)
   return
 end
