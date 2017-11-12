@@ -63,26 +63,28 @@ function bilinearInterpolation(zeroBoundedImage::Array{Float64,2})
 
     nrows, ncols = size(zeroBoundedImage)
     interpolatedImage = zeros(nrows,ncols)
-
+    zeroCounter = 0
     temp = 0.0
     for rows = 2 : nrows-1
         for cols = 2 : ncols-1
             if (zeroBoundedImage[rows,cols]==0)
+              zeroCounter = 0
               temp = zeroBoundedImage[rows-1,cols]+zeroBoundedImage[rows,cols-1]+zeroBoundedImage[rows,cols+1]+zeroBoundedImage[rows+1,cols]
 
-              #check if the interpolation consists of 2 values, not 4
-              if ((zeroBoundedImage[rows-1, cols] == 0) &
-                 (zeroBoundedImage[rows+1, cols] == 0)) ||
-                 ((zeroBoundedImage[rows, cols-1] == 0) &
-                 (zeroBoundedImage[rows, cols+1] == 0))
+              #check what amount of values is used for interpolation
+              if (zeroBoundedImage[rows-1, cols] == 0) zeroCounter = zeroCounter+1 end
+              if (zeroBoundedImage[rows+1, cols] == 0) zeroCounter = zeroCounter+1 end
+              if (zeroBoundedImage[rows, cols-1] == 0) zeroCounter = zeroCounter+1 end
+              if (zeroBoundedImage[rows, cols+1] == 0) zeroCounter = zeroCounter+1 end
 
-                 temp = temp*0.5
-                 elseif
-                   temp = temp*0.25
-              end
+              if (zeroCounter == 1) temp = temp/3 end #somekind of errormessage
+              if (zeroCounter == 2) temp = temp/2  end
+              if (zeroCounter == 3) temp = temp  end
+              if (zeroCounter == 4) temp = temp  end #somekind of errormessage
+
                     interpolatedImage[rows, cols] = temp
               else  interpolatedImage[rows, cols] = zeroBoundedImage[rows, cols]
-          end
+            end
         end
     end
 
