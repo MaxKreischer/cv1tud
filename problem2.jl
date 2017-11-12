@@ -44,6 +44,57 @@ function makeimage(r::Array{Float64,2}, g::Array{Float64,2}, b::Array{Float64,2}
   return image::Array{Float64,3}
 end
 
+#function getSizeFromArray(someImage::Array)
+
+function zeroBounds(imgReceived::Array{Float64,2})
+    #source: script l3. Implementation of solving boundaryissues by adding zeros
+    tempRows, tempCols = size(imgReceived)
+    zeroFilled = zeros(Float64,tempRows+2,tempCols+2)
+    #copy Values to inner Area of ZeroBoundsArry
+    for rows = 1 : tempRows
+        for cols = 1 : tempCols
+            zeroFilled[rows+1,cols+1] = imgReceived[rows,cols]
+        end
+    end
+    return zeroFilled
+end
+
+function bilinearInterpolation(zeroBoundedImage::Array{Float64,2})
+
+    nrows, ncols = size(zeroBoundedImage)
+    interpolatedImage = zeros(nrows,ncols)
+
+    temp = 0.0
+    for rows = 2 : nrows-1
+        for cols = 2 : ncols-1
+            if (zeroBoundedImage[rows,cols]==0)
+              temp = zeroBoundedImage[rows-1,cols]+zeroBoundedImage[rows,cols-1]+zeroBoundedImage[rows,cols+1]+zeroBoundedImage[rows+1,cols]
+
+              #check if the interpolation consists of 2 values, not 4
+              if ((zeroBoundedImage[rows-1, cols] == 0) &
+                 (zeroBoundedImage[rows+1, cols] == 0)) ||
+                 ((zeroBoundedImage[rows, cols-1] == 0) &
+                 (zeroBoundedImage[rows, cols+1] == 0))
+
+                 temp = temp*0.5
+                 elseif
+                   temp = temp*0.25
+              end
+                    interpolatedImage[rows, cols] = temp
+              else  interpolatedImage[rows, cols] = zeroBoundedImage[rows, cols]
+          end
+        end
+    end
+
+      return interpolatedImage
+end
+
+function removeZeroBoundary(zeroBoundedImage::Array{Float64,2})
+
+  reducedMatrix = zeros(Float64, size(zeroBoundedImage))
+
+  return reducedMatrix
+end
 
 # Interpolate missing color values using bilinear interpolation
 function debayer(r::Array{Float64,2}, g::Array{Float64,2}, b::Array{Float64,2})
@@ -54,23 +105,19 @@ function debayer(r::Array{Float64,2}, g::Array{Float64,2}, b::Array{Float64,2})
   #  Robert A. Maschal Jr., S. Susan Young, Joe Reynolds, Keith Krapels,
   #  Jonathan Fanning, and Ted Corbin
   # green correlation kernel:
-  nrows, ncols = size(r)
+
   #kerG  =      castMat2Float(0.25*[0 1 0; 1 4 1; 0 1 0])
   #kerC  =      castMat2Float(0.25*[1 2 1; 2 4 2; 1 2 1])
 
-  gNew = zeros(nrows,ncols)
+  #Solving bounderyissues using zerofilling
+  #received matrices seem to be right
+  zeroR = zeroBounds(r)
+  zeroG = zeroBounds(g)
+  zeroB = zeroBounds(b)
 
-  temp = 0.0
-  for rows = 2 : nrows-1
-      (rows%2 == 0)?(x = 3):(x = 2)
-      for cols = x : 2 : ncols-1
-        if (rows < nrows) & (cols< ncols)
-          temp = g[rows-1, cols] + g[rows, cols-1] + g[rows, cols+1] + g[rows+1, cols]
-        end
-        temp = temp*0.25
-        gNew[rows, cols] = temp
-      end
-  end
+  #using interpolation method
+
+  interpolatedR = bilinearInterpolation(zeroR)
 
 
   #imRed   =   r + Images.imfilter(r, kerNN)
@@ -83,7 +130,7 @@ function debayer(r::Array{Float64,2}, g::Array{Float64,2}, b::Array{Float64,2})
 
 
   #image = makeimage(imRed, imGreen, imBlue)
-  return  gNew
+  return  zeroR, interpolatedR
   #image::Array{Float64,3}
 end
 
@@ -127,9 +174,12 @@ function problem2()
 
   PyPlot.imshow(b, cmap="gray")
   # interpolate Bayer
-  img2 = debayer(r,g,b)
+  #img2 = debayer(r,g,b)
+  zeroR, interpolatedR = debayer(r,g,b)
+
   #PyPlot.imshow(img2)
   # display images
   #displayimages(img1, img1)
-  return r,g,b,img2
+  #BoundsTester = zeroBounds(g)
+  return zeroR, interpolatedR
 end
