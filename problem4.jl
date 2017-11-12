@@ -1,18 +1,21 @@
 using Images
 using PyPlot
 
-
+#Sources: http://www.cs.cornell.edu/courses/cs6670/2011sp/lectures/lec02_filter.pdf
 # Create 3x3 derivative filters in x and y direction
 function createfilters()
-
+  fx = [-1 0 1; -2 0 2; -1 0 1];
+  fx =  fx/8.0;
+  fy = [1 2 1; 0 0 0; -1 -2 -1];
+  fy = fy/8.0;
   return fx::Array{Float64,2},fy::Array{Float64,2}
 end
 
 
 # Apply derivate filters to an image and return the derivative images
 function filterimage(I::Array{Float32,2},fx::Array{Float64,2},fy::Array{Float64,2})
-
-
+  Ix = imfilter(I, fx, [border="replicate"]);
+  Iy = imfilter(I, fy, [border="replicate"]);
   return Ix::Array{Float64,2},Iy::Array{Float64,2}
 end
 
@@ -54,15 +57,14 @@ function problem4()
   imshow(imgy, "gray", interpolation="none")
   title("y derivative")
   axis("off")
-  gcf()
-
+#  gcf()
+"""
   # show gradient magnitude
   figure()
   imshow(sqrt(imgx.^2 + imgy.^2),"gray", interpolation="none")
   axis("off")
   title("Derivative magnitude")
   gcf()
-
   # threshold derivative
   threshold = 42
   edges = detectedges(imgx,imgy,threshold)
@@ -79,5 +81,6 @@ function problem4()
   axis("off")
   title("Non-maximum suppression")
   gcf()
+"""
   return
 end
