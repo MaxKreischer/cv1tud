@@ -65,24 +65,44 @@ function bilinearInterpolation(zeroBoundedImage::Array{Float64,2})
     interpolatedImage = zeros(nrows,ncols)
     zeroCounter = 0
     temp = 0.0
+    temp2 = 0.0
     for rows = 2 : nrows-1
         for cols = 2 : ncols-1
             if (zeroBoundedImage[rows,cols]==0)
               zeroCounter = 0
               temp = zeroBoundedImage[rows-1,cols]+zeroBoundedImage[rows,cols-1]+zeroBoundedImage[rows,cols+1]+zeroBoundedImage[rows+1,cols]
+              temp2 = zeroBoundedImage[rows-1,cols-1]+zeroBoundedImage[rows-1,cols+1]+zeroBoundedImage[rows+1,cols-1]+zeroBoundedImage[rows+1,cols+1]
 
-              #check what amount of values is used for interpolation
-              if (zeroBoundedImage[rows-1, cols] == 0) zeroCounter = zeroCounter+1 end
-              if (zeroBoundedImage[rows+1, cols] == 0) zeroCounter = zeroCounter+1 end
-              if (zeroBoundedImage[rows, cols-1] == 0) zeroCounter = zeroCounter+1 end
-              if (zeroBoundedImage[rows, cols+1] == 0) zeroCounter = zeroCounter+1 end
+              if (temp!=0)#nondiagonal pattern
+                  #check what amount of values is used for interpolation
+                  if (zeroBoundedImage[rows-1, cols] == 0) zeroCounter = zeroCounter+1 end
+                  if (zeroBoundedImage[rows+1, cols] == 0) zeroCounter = zeroCounter+1 end
+                  if (zeroBoundedImage[rows, cols-1] == 0) zeroCounter = zeroCounter+1 end
+                  if (zeroBoundedImage[rows, cols+1] == 0) zeroCounter = zeroCounter+1 end
 
-              if (zeroCounter == 1) temp = temp/3 end #somekind of errormessage
-              if (zeroCounter == 2) temp = temp/2  end
-              if (zeroCounter == 3) temp = temp  end
-              if (zeroCounter == 4) temp = temp  end #somekind of errormessage
+                  if (zeroCounter == 0) temp = temp/4 end
+                  if (zeroCounter == 1) temp = temp/3 end #somekind of errormessage
+                  if (zeroCounter == 2) temp = temp/2  end
+                  if (zeroCounter == 3) temp = temp  end
+                  if (zeroCounter == 4) temp = temp  end #somekind of errormessage
 
-                    interpolatedImage[rows, cols] = temp
+                  interpolatedImage[rows, cols] = temp
+              else
+                  #check what amount of values is used for interpolation
+                  if (zeroBoundedImage[rows-1,cols-1] == 0) zeroCounter = zeroCounter+1 end
+                  if (zeroBoundedImage[rows-1,cols+1] == 0) zeroCounter = zeroCounter+1 end
+                  if (zeroBoundedImage[rows+1,cols-1] == 0) zeroCounter = zeroCounter+1 end
+                  if (zeroBoundedImage[rows+1,cols+1] == 0) zeroCounter = zeroCounter+1 end
+
+                  if (zeroCounter == 0) temp2 = temp2/4 end
+                  if (zeroCounter == 1) temp2 = temp2/3 end #somekind of errormessage
+                  if (zeroCounter == 2) temp2 = temp2/2  end
+                  if (zeroCounter == 3) temp2 = temp2  end
+                  if (zeroCounter == 4) temp2 = temp2  end #somekind of errormessage
+
+                  interpolatedImage[rows, cols] = temp2
+              end #end of checking which was used
+
               else  interpolatedImage[rows, cols] = zeroBoundedImage[rows, cols]
             end
         end
@@ -91,10 +111,17 @@ function bilinearInterpolation(zeroBoundedImage::Array{Float64,2})
       return interpolatedImage
 end
 
+#inverting method of zeroBounds. now the zerobounds are getting removed
 function removeZeroBoundary(zeroBoundedImage::Array{Float64,2})
+  recRows, recCols = size(zeroBoundedImage::Array{Float64,2})
+  reducedMatrix = zeros(Float64, recRows-2, recCols-2)
 
-  reducedMatrix = zeros(Float64, size(zeroBoundedImage))
-
+  #copy Values to inner Area of ZeroBoundsArry
+  for rows = 1 : recRows-2
+      for cols = 1 : recCols-2
+          reducedMatrix[rows,cols] = zeroBoundedImage[rows+1,cols+1]
+      end
+  end
   return reducedMatrix
 end
 
@@ -120,6 +147,14 @@ function debayer(r::Array{Float64,2}, g::Array{Float64,2}, b::Array{Float64,2})
   #using interpolation method
 
   interpolatedR = bilinearInterpolation(zeroR)
+  interpolatedG = bilinearInterpolation(zeroG)
+  interpolatedB = bilinearInterpolation(zeroB)
+
+  #removing the bounds to old arraysize 480x320
+
+  originDimensionsR = removeZeroBoundary(interpolatedR)
+  originDimensionsG = removeZeroBoundary(interpolatedG)
+  originDimensionsB = removeZeroBoundary(interpolatedB)
 
 
   #imRed   =   r + Images.imfilter(r, kerNN)
@@ -132,7 +167,8 @@ function debayer(r::Array{Float64,2}, g::Array{Float64,2}, b::Array{Float64,2})
 
 
   #image = makeimage(imRed, imGreen, imBlue)
-  return  zeroR, interpolatedR
+  image = makeimage(originDimensionsR, originDimensionsG, originDimensionsB)
+  return image
   #image::Array{Float64,3}
 end
 
@@ -176,12 +212,12 @@ function problem2()
 
   PyPlot.imshow(b, cmap="gray")
   # interpolate Bayer
-  #img2 = debayer(r,g,b)
-  zeroR, interpolatedR = debayer(r,g,b)
+  img2 = debayer(r,g,b)
+  #zeroed, interpolatedd = debayer(r,g,b)
 
-  #PyPlot.imshow(img2)
+  PyPlot.imshow(img2)
   # display images
   #displayimages(img1, img1)
   #BoundsTester = zeroBounds(g)
-  return zeroR, interpolatedR
+  return
 end
