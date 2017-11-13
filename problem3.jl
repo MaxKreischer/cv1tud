@@ -151,14 +151,20 @@ end
 
 # Plot 2D points
 function displaypoints2d(points::Array{Float64,2})
-
+  figure()
+  imshow(points, cmap="gray",interpolate="none")
+  title("2D-Points")
+  axis("off")
   return gcf()::Figure
 end
 
 
 # Plot 3D points
 function displaypoints3d(points::Array{Float64,2})
-
+  figure()
+  scatter3D(points)
+  title("3D-Points")
+  axis("off")
   return gcf()::Figure
 end
 
