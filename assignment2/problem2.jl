@@ -5,7 +5,37 @@ using PyPlot
 # where M is the number of pixels per face image and N is the number of images.
 # Also return the dimensions of a single face image and the number of all face images
 function loadfaces()
-
+  n = 0;
+  pxPerImg=0;
+  facedim = [0 0];
+  data=0;
+  firsttime = true;
+  for (root, dirs, files) in walkdir("./data-julia/yale_faces_png")
+    (isempty(dirs))?(break;):();
+    for dir in dirs
+      path = joinpath(root, dir);
+      for (r, d, f) in walkdir(path)
+        for file in f
+          if firsttime
+            firstImgPath = joinpath(r,file);
+            firstImg = convert(Array{Float64,2},imread(firstImgPath));
+            for (idx, data) in enumerate(size(firstImg))
+              facedim[idx] = data;
+            end
+            pxPerImg = facedim[1]*facedim[2];
+            data = reshape(firstImg, pxPerImg);
+            firsttime=false;
+          end
+          imgPath = joinpath(r,file);
+          img = convert(Array{Float64,2}, imread(imgPath));
+          img_serialized = reshape(img, pxPerImg);
+          data = hcat(data, img_serialized);
+          n=n+1;
+        end
+      end
+    end
+  end
+  data = data[:,2:end];
   return data::Array{Float64,2},facedim::Array{Int},n::Int
 end
 
