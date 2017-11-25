@@ -43,7 +43,11 @@ end
 # Return the eigenvectors of covariance matrix of the data, the corresponding eigenvalues,
 # the one-dimensional mean data matrix and a cumulated variance vector in increasing order.
 function computepca(data::Array{Float64,2})
-
+  (M,N) = size(data);
+  mu = sum(data,2)./N;
+  zeroMeanData = data - repmat(mu,1,N);
+  U,S,V = svd(zeroMeanData, [thin=true]);
+  lambda = (S.^2)./N;
   return U::Array{Float64,2},lambda::Array{Float64,1},mu::Array{Float64,2},cumvar::Array{Float64,1}
 end
 
