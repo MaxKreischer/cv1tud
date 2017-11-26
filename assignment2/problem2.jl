@@ -46,8 +46,9 @@ function computepca(data::Array{Float64,2})
   (M,N) = size(data);
   mu = sum(data,2)./N;
   zeroMeanData = data - repmat(mu,1,N);
-  U,S,V = svd(zeroMeanData, [thin=true]);
+  U,S,V = svd(zeroMeanData);
   lambda = (S.^2)./N;
+  cumvar = cumsum(reverse(lambda));
   return U::Array{Float64,2},lambda::Array{Float64,1},mu::Array{Float64,2},cumvar::Array{Float64,1}
 end
 
