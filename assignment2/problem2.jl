@@ -65,7 +65,7 @@ end
 
 # Fetch a single face with given index out of the data matrix. Returns the actual face image.
 function takeface(data::Array{Float64,2},facedim::Array{Int},n::Int)
-
+  face = reshape(data[:,n], (facedim[1],facedim[2]) );
   return face::Array{Float64,2}
 end
 
