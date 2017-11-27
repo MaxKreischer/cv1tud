@@ -4,33 +4,36 @@ using PyPlot
 F2I(x) = convert(Int64, x);
 # Create a gaussian filter
 function makegaussianfilter(size::Array{Int,2},sigma::Float64)
-  gauss(x, sigma) = exp(-(x^2.0/(2*(sigma^2.0))));
-  nrows = size[1];
-  ncols = size[2];
-  filterX = zeros(nrows,1);
-  filterY = zeros(1,ncols);
-  if(nrows%2==0)
-    throw("NOT IMPLEMENTED YET! -> makegaussianfilter for even filters.")
-  else
-    # X direction
-    #liX = linspace(0,3*sigma,ceil(nrows/2))
-    #filterX_ = map(g, liX);
-    filterX_ = [(1.0/sqrt(2.0*pi)*sigma)*exp(-(x^2.0/(2*(sigma^2.0)))) for x in linspace(0, 3*sigma, ceil(nrows/2))];
-    halfX = convert(Int64, ceil(nrows/2));
-    filterX[1:halfX-1] = copy(filterX_[end:-1:2]);
-    filterX[halfX] = copy(filterX_[1]);
-    filterX[halfX+1:end] = copy(filterX_[2:end]);
-    # Y direction
-    #liY = linspace(0,3*sigma,ceil(ncols/2))
-    #filterY_ = map(g, liY);
-    filterY_ = [(1.0/sqrt(2.0*pi)*sigma)*exp(-(y^2.0/(2*(sigma^2.0)))) for y in linspace(0, 3*sigma, ceil(ncols/2))];
-    halfY = convert(Int64, ceil(ncols/2));
-    filterY[1:halfY-1] = copy(filterY_[end:-1:2]);
-    filterY[halfY] = copy(filterY_[1]);
-    filterY[halfY+1:end] = copy(filterY_[2:end]);
+  gauss(x, std=sigma) = (1.0/(sqrt(2.0*pi)*std))*exp((-x.^2)/(2*std.^2));
+  # Resource allocation
+  x_size = size[1];
+  y_size = size[2];
+  upperS = 4.5;
+  lowerS = -upperS;
+  suppSize = 200;
+  support = linspace(lowerS,upperS,suppSize);
+  # X
+  weights_x = zeros(x_size);
+  chunks_x = [k for k=1:floor(Int64,suppSize/x_size):suppSize];
+  len = Base.size(chunks_x)[1];
+  (len==x_size)?(push!(chunks_x,suppSize)):();
+  for i =1:endof(chunks_x)
+    left =  chunks_x[i];
+    (i!=endof(chunks_x))?(right = chunks_x[i+1]):(break);
+    weights_x[i] = sum(gauss(support[left:right]));
   end
-  f = filterX * filterY;
-  #f = copy(f ./ sum(f));
+  # Y
+  weights_y = zeros(y_size);
+  chunks_y = [k for k=1:floor(Int64,suppSize/y_size):suppSize];
+  len = Base.size(chunks_y)[1];
+  (len==y_size)?(push!(chunks_y,suppSize)):();
+  for i =1:endof(chunks_y)
+    left =  chunks_y[i];
+    (i!=endof(chunks_y))?(right = chunks_y[i+1]):(break);
+    weights_y[i] = sum(gauss(support[left:right]));
+  end
+  f = weights_x'' * weights_y';
+  f ./= sum(f);
   return f::Array{Float64,2}
 end
 
@@ -60,6 +63,20 @@ end
 
 # Upsample an image by a factor of 2
 function upsample2(A::Array{Float64,2},fsize::Array{Int,2})
+  nrows_small,ncols_small = size(A);
+  nrows_big = 2*nrows_small
+  ncols_big = 2*ncols_small
+  U = zeros(nrows_big,ncols_big);
+  count = 1;
+  for i =1:nrows_big
+    if i%2!=0
+      U[i,1:2:end] = A[count,:];
+      count+=1;
+    end
+  end
+  filter = makebinomialfilter(fsize);
+  U = imfilter(U,filter,[border="reflect"]);
+  U = U.*4.0;
 
   return U::Array{Float64,2}
 end
@@ -67,13 +84,29 @@ end
 # Build a gaussian pyramid from an image.
 # The output array should contain the pyramid levels in decreasing sizes.
 function makegaussianpyramid(im::Array{Float32,2},nlevels::Int,fsize::Array{Int,2},sigma::Float64)
-
+  nrows,ncols = size(im);
+  gaussFilter = makegaussianfilter([5 5], 1.5);
+  G = Array{Array{Float64, 2},1}(nlevels);
+  for i=1:nlevels
+    if i==1
+      G[i] = Array{Float64,2}(im);
+    else
+      G[i] = imfilter(G[i-1], gaussFilter, [border="symmetric"]);
+      G[i] = downsample2(G[i]);
+    end
+  end
   return G::Array{Array{Float64,2},1}
+
 end
 
 # Display a given image pyramid (laplacian or gaussian)
 function displaypyramid(P::Array{Array{Float64,2},1})
+  pyramid = deepcopy(P);
 
+  for i =1:endof(pyramid)
+    pyramid[i] = pyramid[i]./sum(pyramid[i]);
+  end
+  imshow(pyramid[3],"gray",interpolation="none")
   return nothing::Void
 end
 
@@ -110,9 +143,6 @@ function problem1()
 
   # create gaussian pyramid
   G = makegaussianpyramid(im,nlevels,fsize,sigma)
-
-  return "Test RET"
-
 
   # display gaussianpyramid
   displaypyramid(G)
