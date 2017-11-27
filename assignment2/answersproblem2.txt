@@ -1,0 +1,9 @@
+3.:
+  The variance of the i-th principle component is the i-th eigenvalue obtained
+  by the formula: l_i = (s_i)^2 / N; Where li is the eigenvalue, s_i is the
+  i-th singular value and N is the number of points in the dataset.
+  Projecting the data onto a lower-dimensional subspace of the originial sample
+  set is equivalent to a linear transformation C being applied to the data. The
+  resultant lower dimensional space represents the data as points under an
+  orthonormal basis. This means that the data in the new subspace is not
+  linearly interdependent. This is equivalent to a diagonal covariance matrix.
