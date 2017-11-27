@@ -101,31 +101,57 @@ end
 
 # Display a given image pyramid (laplacian or gaussian)
 function displaypyramid(P::Array{Array{Float64,2},1})
+  nrows,ncols = size(P[1]);
+  ncolsPyr_List = Array{Int64,1}([ncols/(2.0^i) for i=0:endof(P)-1]);
+  ncolsPyr = Int64(sum(ncolsPyr_List));
   pyramid = deepcopy(P);
-
   for i =1:endof(pyramid)
-    pyramid[i] = pyramid[i]./sum(pyramid[i]);
+    pyramid[i] = pyramid[i]./maximum(pyramid[i]);
   end
-  imshow(pyramid[3],"gray",interpolation="none")
+  cols = Array{Int64,1}(cumsum(ncolsPyr_List));
+  pyrF = pyramid[1];
+  for i=1:endof(pyramid)
+    if i==1
+      pyrPiece = deepcopy(pyramid[i]);
+      pyrF = copy(pyrPiece);
+    else
+      pyrF = hcat(pyrF, vcat(pyramid[i],zeros((ncolsPyr_List[1]-ncolsPyr_List[i]),ncolsPyr_List[i]) ));
+    end
+  end
+  imshow(pyrF,"gray",interpolation="none")
   return nothing::Void
 end
 
 # Build a laplacian pyramid from a gaussian pyramid.
 # The output array should contain the pyramid levels in decreasing sizes.
 function makelaplacianpyramid(G::Array{Array{Float64,2},1},nlevels::Int,fsize::Array{Int,2})
-
+  L = Array{Array{Float64, 2},1}(nlevels);
+  L[end] = deepcopy(G[end]);
+  for i=endof(L)-1:-1:1
+    L[i] = G[i]-upsample2(G[i+1], fsize);
+  end
   return L::Array{Array{Float64,2},1}
 end
 
 # Amplify frequencies of the first two layers of the laplacian pyramid
 function amplifyhighfreq2(L::Array{Array{Float64,2},1})
-
+  k = 1.45;
+  A = deepcopy(L);
+  A[1] = deepcopy(L[1].*k);
+  A[2] = deepcopy(L[2].*k);
   return A::Array{Array{Float64,2},1}
 end
 
 # Reconstruct an image from the laplacian pyramid
 function reconstructlaplacianpyramid(L::Array{Array{Float64,2},1},fsize::Array{Int,2})
-
+  Lsharp = amplifyhighfreq2(L);
+  nlevels = endof(Lsharp);
+  G = Array{Array{Float64, 2},1}(nlevels);
+  G[end] = Lsharp[end];
+  for i=nlevels-1:-1:1
+    G[i] = Lsharp[i]+upsample2(G[i+1],fsize);
+  end
+  im = deepcopy(G[1]);
   return im::Array{Float64,2}
 end
 
