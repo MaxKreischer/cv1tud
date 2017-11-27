@@ -1,0 +1,9 @@
+7.:
+  The difference between the top levels of gaussian and laplacian pyramids is
+  none.
+8.:
+  Since the finest subband contains the only high frequency components of the
+  original image this also includes noise. This leads to decreasing image
+  quality as the amplification of the sharpening is increased. The image quickly
+  turns grainy and grayish as it seems to be very sensitive to the amplification
+  factor.
