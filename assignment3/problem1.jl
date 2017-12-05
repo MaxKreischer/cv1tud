@@ -15,7 +15,8 @@ include("Common.jl")
 #
 #---------------------------------------------------------
 function loadimage(filename)
-
+  rgb = imread(filename);
+  gray = Common.rgb2gray(rgb);
   return gray::Array{Float32,2}, rgb::Array{Float32,3}
 end
 
@@ -36,8 +37,19 @@ end
 #
 #---------------------------------------------------------
 function computetensor(img::Array{Float64,2},sigma::Float64,sigma_tilde::Float64,fsize::Int)
-
-
+  gaussDerivs = Common.gauss2d(sigma, [fsize, fsize]);
+  gaussCoeffs = Common.gauss2d(sigma_tilde, [fsize, fsize]);
+  x_deriv = [-1.0, 0.0, 1.0]';
+  y_deriv = x_deriv';
+  imSmooth = imfilter(img, gaussDerivs);
+  imDx = imfilter(imSmooth, x_deriv);
+  imDy = imfilter(imSmooth, y_deriv);
+  S_xx = imDx.^2.0;
+  S_yy = imDy.^2.0;
+  S_xy = imDx.*imDy;
+  S_xx = imfilter(S_xx, gaussCoeffs);
+  S_yy = imfilter(S_yy, gaussCoeffs);
+  S_xy = imfilter(S_xy, gaussCoeffs);
   return S_xx::Array{Float64,2},S_yy::Array{Float64,2},S_xy::Array{Float64,2}
 end
 
@@ -57,8 +69,13 @@ end
 #
 #---------------------------------------------------------
 function computeharris(S_xx::Array{Float64,2},S_yy::Array{Float64,2},S_xy::Array{Float64,2}, sigma::Float64, alpha::Float64)
-
-
+  harris = zeros(size(S_xx));
+  for i=1:nrows
+    for j=1:ncols
+      S = [S_xx[i,j] S_xy[i,j]; S_xy[i,j] S_yy[i,j]];
+      harris[i,j] = sigma.^4.0*(det(S) - alpha*(trace(S)).^2.0);
+    end
+  end
   return harris::Array{Float64,2}
 end
 
@@ -79,8 +96,27 @@ end
 #
 #---------------------------------------------------------
 function nonmaxsupp(harris::Array{Float64,2}, thresh::Float64)
-
-
+  function localMaxima(x)
+    wLen = size(x)[1];
+    maxima = zeros(wLen);
+    largest = maximum(x);
+    lIdx = [];
+    for i=1:wLen
+      (largest==x[i])?(push!(lIdx,i)):();
+    end
+    maxima[lIdx[:]] = x[lIdx[:]];
+  end
+  nrows,ncols = size(harris);
+  harris_nonmax = Common.nlfilter(harris, localMaxima, 5, 5);
+  harris_nonmax[1:2,:] = 0.0;
+  harris_nonmax[end:-1:end-1,:] = 0.0;
+  harris_nonmax[:,1:2] = 0.0;
+  harris_nonmax[:,end:-1:end-1] = 0.0;
+  for i=1:nrows
+    for j=1:ncols
+      (harris_nonmax[i,j]<thresh)?(harris_nonmax[i,j] = 0.0):();
+    end
+  end
   return px::Array{Int,1},py::Array{Int,1}
 end
 
