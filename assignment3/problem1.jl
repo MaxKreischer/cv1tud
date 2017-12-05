@@ -117,6 +117,16 @@ function nonmaxsupp(harris::Array{Float64,2}, thresh::Float64)
       (harris_nonmax[i,j]<thresh)?(harris_nonmax[i,j] = 0.0):();
     end
   end
+  px = [];
+  py = [];
+  for i=1:nrows
+    for j=1:ncols
+      if(harris_nonmax[i,j] != 0.0)
+        push!(px, i);
+        push!(py, j);
+      end
+    end
+  end
   return px::Array{Int,1},py::Array{Int,1}
 end
 
