@@ -2,6 +2,8 @@ using Images
 using PyPlot
 using Grid
 
+using JLD
+
 include("Common.jl")
 
 
@@ -18,7 +20,8 @@ include("Common.jl")
 #---------------------------------------------------------
 function loadkeypoints(filename::String)
 
-
+  keypoints1 = JLD.load(filename, "keypoints1");
+  keypoints2 = JLD.load(filename, "keypoints2");
 
   @assert size(keypoints1,2) == 2
   @assert size(keypoints2,2) == 2
@@ -38,7 +41,19 @@ end
 #
 #---------------------------------------------------------
 function euclideansquaredist(features1::Array{Float64,2},features2::Array{Float64,2})
-
+  D = ones(size(feat1)[2],size(feat2)[2]);
+  function eucDist(x,y)
+    sum = 0;
+    for i=1:128
+      sum+= (x[i]-y[i])^2;
+    end
+    return sum;
+  end
+  for i=1:size(features1)[2]
+    for j=1:size(features2)[2]
+      D[i,j] = eucDist(features1[:,i],features2[:,j]);
+    end
+  end
   @assert size(D) == (size(features1,2),size(features2,2))
   return D::Array{Float64,2}
 end
@@ -59,9 +74,12 @@ end
 #
 #---------------------------------------------------------
 function findmatches(p1::Array{Int,2},p2::Array{Int,2},D::Array{Float64,2})
-
-
-
+  kpMinDim = minimum(size(eucMat));
+  pairs = zeros(kpMinDim,4);
+  for i=1:kpMinDim
+    pairs[i,1:2] = p1[i,:];
+    pairs[i,3:4] = p2[indmin(D[i,:]),:];
+  end
   @assert size(pairs) == (min(size(p1,1),size(p2,1)),4)
   return pairs::Array{Int,2}
 end
