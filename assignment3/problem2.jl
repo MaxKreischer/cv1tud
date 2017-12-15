@@ -75,7 +75,7 @@ end
 #---------------------------------------------------------
 function findmatches(p1::Array{Int,2},p2::Array{Int,2},D::Array{Float64,2})
   kpMinDim = minimum(size(eucMat));
-  pairs = zeros(kpMinDim,4);
+  pairs = zeros(Int64,kpMinDim,4);
   for i=1:kpMinDim
     pairs[i,1:2] = p1[i,:];
     pairs[i,3:4] = p2[indmin(D[i,:]),:];
@@ -97,9 +97,13 @@ end
 #
 #---------------------------------------------------------
 function showmatches(im1::Array{Float64,2},im2::Array{Float64,2},pairs::Array{Int,2})
-
-
-
+  figure()
+  plotImg = hcat(im1,im2);
+  PyPlot.imshow(plotImg,cmap="gray",interpolation="none")
+  PyPlot.scatter(pairs[:,1],pairs[:,2])
+  PyPlot.scatter(pairs[:,3]+400,pairs[:,4])
+  #TODO: Plot lines connecting scattered points
+  #PyPlot.plot(pairs[:,1],pairs[:,2],pairs[:,3]+400,pairs[:,4])
   return nothing::Void
 end
 
@@ -117,9 +121,9 @@ end
 #
 #---------------------------------------------------------
 function computeransaciterations(p::Float64,k::Int,z::Float64)
-
-
-
+  #taken from Szeliski book p.319
+  n=log(1.0-z)/log(1-(p^k));
+  n=Int64.(ceil(n));
   return n::Int
 end
 
@@ -138,9 +142,16 @@ end
 #
 #---------------------------------------------------------
 function picksamples(points1::Array{Int,2},points2::Array{Int,2},k::Int)
-
-
-
+  p1Dim = size(points1,1);
+  p2Dim = size(points2,1);
+  p1Idc = rand(1:p1Dim,k);
+  p2Idc = rand(1:p2Dim,k);
+  sample1 = zeros(Int64,k,2);
+  sample2 = zeros(Int64,k,2);
+  for i=1:k
+    sample1[i,:] = points1[i,:];
+    sample2[i,:] = points2[i,:];
+  end
 
   @assert size(sample1) == (k,2)
   @assert size(sample2) == (k,2)
@@ -161,9 +172,16 @@ end
 #
 #---------------------------------------------------------
 function condition(points::Array{Float64,2})
-
-
-
+    pts = hcat(points, ones(size(points,1),1))';
+    U = zeros(size(points));
+    t = zeros(2,1);
+    vec = [points[i,:] for i in 1:size(points,1)];
+    s = 0.5*maximum(map(norm,vec));
+    t[1] = mean(points[:,1]);
+    t[2] = mean(points[:,2]);
+    T = [1.0/s 0.0 -t[1]/s; 0.0 1.0/s -t[2]/s; 0.0 0.0 1.0];
+    Utemp = T*pts;
+    U = Utemp[1:2,:]';
 
 
   @assert size(U) == size(points)
