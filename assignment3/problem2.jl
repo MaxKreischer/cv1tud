@@ -41,7 +41,7 @@ end
 #
 #---------------------------------------------------------
 function euclideansquaredist(features1::Array{Float64,2},features2::Array{Float64,2})
-  D = ones(size(feat1)[2],size(feat2)[2]);
+  D = ones(size(features1,2),size(features2,2));
   function eucDist(x,y)
     sum = 0;
     for i=1:128
@@ -74,12 +74,23 @@ end
 #
 #---------------------------------------------------------
 function findmatches(p1::Array{Int,2},p2::Array{Int,2},D::Array{Float64,2})
-  kpMinDim = minimum(size(eucMat));
-  pairs = zeros(Int64,kpMinDim,4);
-  for i=1:kpMinDim
-    pairs[i,1:2] = p1[i,:];
-    pairs[i,3:4] = p2[indmin(D[i,:]),:];
+  minDim = minimum(size(D));
+  pairs = zeros(Int64,minDim,4);
+  matchFirstWithSecond = true;
+  (indmin(size(D)) > 1)?(matchFirstWithSecond = false):();
+
+  if(matchFirstWithSecond)
+    for i=1:minDim
+      pairs[i,1:2] = p1[i,:];
+      pairs[i,3:4] = p2[indmin(D[i,:]),:];
+    end
+  else
+    for i=1:minDim
+      pairs[i,1:2] = p2[i,:];
+      pairs[i,3:4] = p1[indmin(D[i,:]),:];
+    end
   end
+
   @assert size(pairs) == (min(size(p1,1),size(p2,1)),4)
   return pairs::Array{Int,2}
 end
@@ -144,13 +155,14 @@ end
 function picksamples(points1::Array{Int,2},points2::Array{Int,2},k::Int)
   p1Dim = size(points1,1);
   p2Dim = size(points2,1);
-  p1Idc = rand(1:p1Dim,k);
-  p2Idc = rand(1:p2Dim,k);
+  (p1Dim < p2Dim)?(sampleIndices = rand(1:p1Dim,k)):
+                                              (sampleIndices = rand(1:p2Dim,k));
   sample1 = zeros(Int64,k,2);
   sample2 = zeros(Int64,k,2);
-  for i=1:k
-    sample1[i,:] = points1[i,:];
-    sample2[i,:] = points2[i,:];
+
+  for (idx,el) in enumerate(sampleIndices)
+    sample1[idx,:] = points1[el,:];
+    sample2[idx,:] = points2[el,:];
   end
 
   @assert size(sample1) == (k,2)
@@ -202,8 +214,27 @@ end
 #
 #---------------------------------------------------------
 function computehomography(points1::Array{Int,2}, points2::Array{Int,2})
-
-
+  # condition coords.
+  #offset = size(points1,1);
+  #pts = vcat(points1, points2);
+  u1, T1 = condition(Float64.(points1));
+  u2, T2 = condition(Float64.(points2));
+  # build system of eqs.
+  A = zeros(8,9);
+  for i=1:4
+    x         = u1[i,1];
+    x_dashed  = u2[i,1];
+    y         = u1[i,2];
+    y_dashed  = u2[i,2];
+    A[2*i-1,:]    = [0.0 0.0 0.0 x y 1.0 -x*y_dashed -y*y_dashed -y_dashed];
+    A[2*i,:]  = [-x -y -1.0 0.0 0.0 0.0 x*x_dashed y*x_dashed x_dashed];
+  end
+  # solve system
+  U,S,V = svd(A, thin=false);
+  Hbar = [V[1,9] V[2,9] V[3,9];
+          V[4,9] V[5,9] V[6,9];
+          V[7,9] V[8,9] V[9,9]];
+  H = inv(T2)*Hbar*T1;
 
 
   @assert size(H) == (3,3)
@@ -225,9 +256,16 @@ end
 #
 #---------------------------------------------------------
 function computehomographydistance(H::Array{Float64,2},points1::Array{Int,2},points2::Array{Int,2})
+  iterLen = min(size(points1,1),size(points2,1))
+  points1_hom = Common.cart2hom(points1');
+  points2_hom = Common.cart2hom(points2');
+  points1_est = Common.hom2cart(inv(H)*points2_hom);
+  points2_est = Common.hom2cart(H*points1_hom);
+  d2 = zeros(iterLen,1);
 
-
-
+  for i=1:iterLen
+      d2[i] = norm(points2_est[:,i] - points2'[:,i])^2 + norm(points1'[:,i] - points1_est[:,i])^2;
+  end
 
   @assert length(d2) == size(points1,1)
   return d2::Array{Float64,2}
@@ -247,8 +285,14 @@ end
 #
 #---------------------------------------------------------
 function findinliers(distance::Array{Float64,2},thresh::Float64)
-
-
+  n = 0;
+  indices = Array{Int64,1}();
+  for (idx,el) in enumerate(distance)
+    if(el < thresh)
+      n+=1;
+      push!(indices, idx);
+    end
+  end
 
   return n::Int,indices::Array{Int,1}
 end
@@ -272,9 +316,23 @@ end
 #
 #---------------------------------------------------------
 function ransac(pairs::Array{Int,2},thresh::Float64,n::Int)
-
-
-
+  img1_pts = pairs[:,1:2];
+  img2_pts = pairs[:,3:4];
+  nCurrBestInliers = 0;
+  bestinliers = Array{Int,1}();
+  bestpairs = Array{Int,2}();
+  bestH = Array{Float64,2}();
+  for idx = 1:n
+    sample1,sample2 = picksamples(img1_pts,img2_pts,4);
+    H = computehomography(sample1,sample2);
+    d2 = computehomographydistance(H, img1_pts, img2_pts);
+    nInliers, currIndices = findinliers(d2, thresh);
+    if (nCurrBestInliers < nInliers)
+      bestinliers = [pairs[idx, :] for idx in currIndices];
+      bestH = H;
+      bestpairs = hcat(sample1,sample2);
+    end
+  end
 
 
 
