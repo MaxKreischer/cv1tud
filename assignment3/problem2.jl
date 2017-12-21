@@ -324,20 +324,24 @@ function ransac(pairs::Array{Int,2},thresh::Float64,n::Int)
   bestH = Array{Float64,2}();
   for idx = 1:n
     sample1,sample2 = picksamples(img1_pts,img2_pts,4);
-    H = computehomography(sample1,sample2);
-    d2 = computehomographydistance(H, img1_pts, img2_pts);
-    nInliers, currIndices = findinliers(d2, thresh);
-    if (nCurrBestInliers < nInliers)
-      bestinliers = [pairs[idx, :] for idx in currIndices];
-      bestH = H;
-      bestpairs = hcat(sample1,sample2);
+    try
+      H = computehomography(sample1,sample2);
+      d2 = computehomographydistance(H, img1_pts, img2_pts);
+      nInliers, currIndices = findinliers(d2, thresh);
+      if (nCurrBestInliers < nInliers)
+        bestinliers = currIndices;
+        bestpairs = hcat(sample1,sample2);
+        bestH = H;
+      end
+    catch linAlgError
+      if( isa(linAlgError, Base.LinAlg.SingularException) )
+        println("Singular Matrix Error")
+      else
+        println("Other error")
+      end
     end
+
   end
-
-
-
-
-
 
   @assert size(bestinliers,2) == 1
   @assert size(bestpairs) == (4,4)
@@ -358,9 +362,9 @@ end
 #
 #---------------------------------------------------------
 function refithomography(pairs::Array{Int64,2}, inliers::Array{Int64,1})
-
-
-
+  bestPairs = zeros(size(inliers,1),4);
+  [bestPairs[i,:] = pairs[inliers[i],:] for i=1:size(inliers,1)];
+  H = computehomography(bestPairs[:,1:2],bestPairs[:,3:4]);
 
   @assert size(H) == (3,3)
   return H::Array{Float64,2}
@@ -377,10 +381,23 @@ end
 #
 #---------------------------------------------------------
 function showstitch(im1::Array{Float64,2},im2::Array{Float64,2},H::Array{Float64,2})
+  #transform img2plane to img1plane
+  xrange = 1:size(im2,2);
+  yrange = 1:size(im2,1);
+  nPoints = size(im2,1)*size(im2,2);
 
+  coords = zeros(nPoints,2);
+  coords = [[x y]  for x in xrange for y in yrange];
+  coords = Array{Float64,2}.(coords);
+  coords2 = zeros(nPoints,3);
+  for (idx,el) in enumerate(coords )
+    coords2[idx,:] = hcat(coords[idx], 1.0);
+  end
+  coordsTransformed = inv(H)*coords2';
+  coordsTransformed = Common.hom2cart(coordsTransformed)';
 
-
-  return nothing::Void
+  return coords2,coordsTransformed
+  #return nothing::Void
 end
 
 
