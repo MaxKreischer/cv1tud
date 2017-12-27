@@ -69,7 +69,8 @@ end
 #
 #---------------------------------------------------------
 function computeharris(S_xx::Array{Float64,2},S_yy::Array{Float64,2},S_xy::Array{Float64,2}, sigma::Float64, alpha::Float64)
-  harris = zeros(size(S_xx));
+  nrows, ncols = size(S_xx);
+  harris = zeros(nrows,ncols);
   for i=1:nrows
     for j=1:ncols
       S = [S_xx[i,j] S_xy[i,j]; S_xy[i,j] S_yy[i,j]];
@@ -96,34 +97,25 @@ end
 #
 #---------------------------------------------------------
 function nonmaxsupp(harris::Array{Float64,2}, thresh::Float64)
-  function localMaxima(x)
-    wLen = size(x)[1];
-    maxima = zeros(wLen);
-    largest = maximum(x);
-    lIdx = [];
-    for i=1:wLen
-      (largest==x[i])?(push!(lIdx,i)):();
-    end
-    maxima[lIdx[:]] = x[lIdx[:]];
-  end
   nrows,ncols = size(harris);
-  harris_nonmax = Common.nlfilter(harris, localMaxima, 5, 5);
-  harris_nonmax[1:2,:] = 0.0;
-  harris_nonmax[end:-1:end-1,:] = 0.0;
-  harris_nonmax[:,1:2] = 0.0;
-  harris_nonmax[:,end:-1:end-1] = 0.0;
+  harris_nonmax = Common.nlfilter(harris, maximum, 5, 5);
+  harris_nonmax[1:2,:] = zeros(size(harris_nonmax[1:2,:]));
+  harris_nonmax[end:-1:end-1,:] = zeros(size(harris_nonmax[end:-1:end-1,:]));
+  harris_nonmax[:,1:2] = zeros(size(harris_nonmax[:,1:2]));
+  harris_nonmax[:,end:-1:end-1] = zeros(size(harris_nonmax[:,end:-1:end-1]));
   for i=1:nrows
     for j=1:ncols
       (harris_nonmax[i,j]<thresh)?(harris_nonmax[i,j] = 0.0):();
     end
   end
-  px = [];
-  py = [];
-  for i=1:nrows
-    for j=1:ncols
-      if(harris_nonmax[i,j] != 0.0)
-        push!(px, i);
-        push!(py, j);
+  px = Array{Int64,1}();
+  py = Array{Int64,1}();
+  # rows -> y, cols -> x
+  for row=1:nrows
+    for col=1:ncols
+      if(harris_nonmax[row,col] != 0.0)
+        push!(px, col);
+        push!(py, row);
       end
     end
   end
@@ -180,4 +172,25 @@ function problem1()
   axis("off")
   title("Harris interest points after non-maximum suppression")
   return nothing
+end
+
+function showcrap(img,x1,y1,x2,y2)
+  figure()
+  subplot(121)
+  imshow(img)
+  plot(x1,y1, "xy")
+  axis("off")
+  subplot(122)
+  imshow(img)
+  plot(x2,y2, "xy")
+  axis("off")
+  gcf()
+end
+
+
+#   Extracts local maxima within a 5x5 stencils.
+#   Allows multiple points with equal values within the same window.
+#   Applies thresholding with the given threshold.
+function test(x)
+  return maximum(x)
 end
