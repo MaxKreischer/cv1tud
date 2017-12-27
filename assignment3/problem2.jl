@@ -362,7 +362,7 @@ end
 #
 #---------------------------------------------------------
 function refithomography(pairs::Array{Int64,2}, inliers::Array{Int64,1})
-  bestPairs = zeros(size(inliers,1),4);
+  bestPairs = zeros(Int64, size(inliers,1),4);
   [bestPairs[i,:] = pairs[inliers[i],:] for i=1:size(inliers,1)];
   H = computehomography(bestPairs[:,1:2],bestPairs[:,3:4]);
 
@@ -393,10 +393,29 @@ function showstitch(im1::Array{Float64,2},im2::Array{Float64,2},H::Array{Float64
   for (idx,el) in enumerate(coords )
     coords2[idx,:] = hcat(coords[idx], 1.0);
   end
-  coordsTransformed = inv(H)*coords2';
-  coordsTransformed = Common.hom2cart(coordsTransformed)';
+  coordsT = inv(H)*coords2';
 
-  return coords2,coordsTransformed
+  for col in 1:size(coordsT,2)
+    coordsT[:,col] = coordsT[:,col]./coordsT[3,col];
+  end
+
+  rows = 1:size(im2,1);
+  cols = 1:size(im2,2);
+  interGrid = CoordInterpGrid((rows,cols), im2, BCnan, InterpLinear)
+  newimg =  zeros(size(im2))
+  currRow = 1
+  currCol = 1
+  for i=1:size(coordsT,2)
+    if i%size(im2,1)==0
+      currRow = 1;
+      currCol +=1;
+    end
+    (currCol > 400)?(break):();
+    newimg[currRow,currCol] = interGrid[ coordsT[2,i],coordsT[1,i]-coordsT[1] ]
+    currRow+=1;
+  end
+
+  return coordsT,newimg
   #return nothing::Void
 end
 
@@ -460,5 +479,49 @@ function problem2()
   H = refithomography(pairs,bestinliers)
   showstitch(im1,im2,H)
 
+  return nothing
+end
+
+function showcrap(im1,im2)
+  figure()
+  subplot(211)
+  imshow(im1,cmap="gray",interpolation="none")
+  axis("off")
+  subplot(212)
+  imshow(im2,cmap="gray",interpolation="none")
+  axis("off")
+end
+
+
+function testFun(coords,img)
+  xrange = 1:size(img,1);
+  yrange = 1:size(img,2);
+  interGrid = CoordInterpGrid((xrange,yrange), img, BCnan, InterpLinear)
+  newimg =  zeros(size(img))
+  currRow = 1
+  currCol = 1
+  for i=1:size(coords,2)
+    if i%size(img,1)==0
+      currRow = 1;
+      currCol +=1;
+    end
+    (currCol > 400)?(break):()
+    newimg[currRow,currCol] = interGrid[coords[2,i],coords[1,i]-184.494]
+    currRow+=1;
+  end
+  return newimg
+end
+function showCrappy(img1,img2New)
+  pano = zeros(size(img1,1),700);
+  for i=1:300
+    pano[:,i] = img1[:,i]
+  end
+  currCol = 301
+  for i = 100:size(img2New,2)
+    #(currCol >700)?(break):();
+    pano[:,currCol] = img2New[:,i];
+    currCol+=1;
+  end
+  imshow(pano, cmap="gray", interpolation="none")
   return nothing
 end
