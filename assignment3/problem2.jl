@@ -401,21 +401,40 @@ function showstitch(im1::Array{Float64,2},im2::Array{Float64,2},H::Array{Float64
 
   rows = 1:size(im2,1);
   cols = 1:size(im2,2);
+  #rows = 1:299;
+  #cols = 1:700;
   interGrid = CoordInterpGrid((rows,cols), im2, BCnan, InterpLinear)
-  newimg =  zeros(size(im2))
-  currRow = 1
-  currCol = 1
-  for i=1:size(coordsT,2)
-    if i%size(im2,1)==0
-      currRow = 1;
-      currCol +=1;
+
+  #newRows = Int64.(maximum(ceil(coordsT[2,:])));
+  #newCols = Int64.(maximum(ceil(coordsT[1,:])));
+  #newimg =  zeros(newRows,newCols);
+
+#  currRow = 1
+#  currCol = 1
+#  for i=1:size(coordsT,2)
+#    if i%size(im2,1)==0
+#      currRow = 1;
+#      currCol +=1;
+#    end
+#    (currCol > 400)?(break):();
+#    newimg[currRow,currCol] = interGrid[ coordsT[2,i],coordsT[1,i]-coordsT[1] ]
+#    currRow+=1;
+#  end
+
+  valsX = coordsT[1,:];
+  valsY = coordsT[2,:];
+  #interVals = [interGrid[y,x] for x in valsX, y in valsY]
+  interVals = Array{Float64,1}();
+  for y in valsY
+    for x in valsX
+      push!(interVals,interGrid[x,y]);
     end
-    (currCol > 400)?(break):();
-    newimg[currRow,currCol] = interGrid[ coordsT[2,i],coordsT[1,i]-coordsT[1] ]
-    currRow+=1;
   end
 
-  return coordsT,newimg
+  sz = size(interVals)
+
+
+  return coordsT, interVals, sz
   #return nothing::Void
 end
 
