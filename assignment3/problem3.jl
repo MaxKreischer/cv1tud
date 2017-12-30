@@ -19,12 +19,18 @@ include("Common.jl")
 #---------------------------------------------------------
 function condition(points::Array{Float64,2})
   # just insert your problem2 condition method here..
-  U = zeros(size(points));
-  t = zeros(2,1);
-  vec = [points[i,:] for i in 1:size(points,1)];
-  s = 0.5*maximum(map(norm,vec));
-  t[1] = mean(points[:,1]);
-  t[2] = mean(points[:,2]);
+  ptDirection = indmax(size(points))
+
+  t = sum(points, ptDirection)./size(points,ptDirection);
+  (any( i->(i>2),size(t)))?(t=t[1:2]):()
+
+  if ptDirection==1
+    s = [norm(points[i,:]) for i=1:size(points,ptDirection)];
+  else
+    s = [norm(points[:,i]) for i=1:size(points,ptDirection)]
+  end
+  s = 0.5*maximum(s);
+
   T = [1.0/s 0.0 -t[1]/s; 0.0 1.0/s -t[2]/s; 0.0 0.0 1.0];
   U = T*points;
 
@@ -71,19 +77,25 @@ function computefundamental(p1::Array{Float64,2},p2::Array{Float64,2})
   # build homog. lin. eq. system
   # TODO: draw 8pts at random or just take whatever pts?
   A = zeros(8,9);
+  indices = collect(1:8);
   for i=1:8
-    A[i,:] = reshape(p2[:,i]*p1[:,i]',(1,9));
+    x = p1[1,indices[i]]
+    x_d = p2[1,indices[i]]
+    y = p1[2,indices[i]]
+    y_d = p2[2,indices[i]]
+    A[i,:] = [x*x_d y*x_d x_d x*y_d y*y_d y_d x y 1.0];
+    #A[i,:] = reshape(p2[:,i+8]*p1[:,i+8]',(1,9));
   end
 
   # solve using SVD (thin=false)
   U,S,V = svd(A, thin=false);
 
-  Ftilde = [V[1,end] V[2,end] V[3,end];
-            V[4,end] V[5,end] V[6,end];
-            V[7,end] V[8,end] V[9,end]];
+  F =       [V[1,9] V[2,9] V[3,9];
+             V[4,9] V[5,9] V[6,9];
+             V[7,9] V[8,9] V[9,9]];
 
   # enforce rank of 2
-  F = enforcerank2(Ftilde);
+  F = enforcerank2(F);
 
   @assert size(F) == (3,3)
   return F::Array{Float64,2}
@@ -102,8 +114,9 @@ end
 #
 #---------------------------------------------------------
 function eightpoint(p1::Array{Float64,2},p2::Array{Float64,2})
-  p1cond, T1 = condition(p1);
-  p2cond, T2 = condition(p2);
+  p1cond, T1 = condition(p1[:,1:8]);
+  p2cond, T2 = condition(p2[:,1:8]);
+  @show p1cond
   Fbar = computefundamental(p1cond,p2cond);
   F = T2'*Fbar*T1;
 
@@ -131,10 +144,17 @@ end
 #     img       left image to be drawn on
 #
 #---------------------------------------------------------
-function showepipolar(F::Array{Float64,2},points::Array{Float64,2},img::Array{Float64,3})
+#function showepipolar(F::Array{Float64,2},points::Array{Float64,2},img::Array{Float64,3})
+function showepipolar(points1::Array{Float64,2},points2::Array{Float64,2},img1::Array{Float64,3},img2::Array{Float64,3})
+  # l1 = F*x2 OR l2 = F' x1
 
-
-
+  figure()
+  subplot(211)
+  PyPlot.imshow(img1)
+  PyPlot.scatter(points1[16,1],points1[16,2])
+  subplot(212)
+  PyPlot.imshow(img2)
+  PyPlot.scatter(points2[16,1],points2[16,2])
 
 
   return nothing::Void
@@ -155,8 +175,13 @@ end
 #
 #---------------------------------------------------------
 function computeresidual(p1::Array{Float64,2},p2::Array{Float64,2},F::Array{Float64,2})
-
-
+  # 0 = p1' * F * p2 --> residuals are difference to 0
+  # p1 expected in homogenous coords.: 3xN
+  amountPts = size(p1,2);
+  residual = zeros(amountPts,1);
+  for i=1:amountPts
+    residual[i] = (p1[1:3,i]' * F * p2[1:3,i])[1];
+  end
 
 
 
