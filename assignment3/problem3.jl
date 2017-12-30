@@ -177,10 +177,13 @@ end
 function computeresidual(p1::Array{Float64,2},p2::Array{Float64,2},F::Array{Float64,2})
   # 0 = p1' * F * p2 --> residuals are difference to 0
   # p1 expected in homogenous coords.: 3xN
+  # alternative residual:
+  # sum^i ( d(p2_i, F*p1_i)^2  +  d(p1_i, F'*p2_i)^2  )
+
   amountPts = size(p1,2);
   residual = zeros(amountPts,1);
   for i=1:amountPts
-    residual[i] = (p1[1:3,i]' * F * p2[1:3,i])[1];
+    residual[i] = (p1[:,i]' * F * p2[:,i])[1];
   end
 
 
