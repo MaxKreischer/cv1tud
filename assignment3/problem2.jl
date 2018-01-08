@@ -530,7 +530,7 @@ function testFun(coords,img)
   end
   return newimg
 end
-function showCrappy(img1,img2New)
+function showtest(img1,img2New)
   pano = zeros(size(img1,1),700);
   for i=1:300
     pano[:,i] = img1[:,i]
