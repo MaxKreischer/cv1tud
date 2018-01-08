@@ -75,16 +75,18 @@ end
 # Compute the fundamental matrix for given conditioned points
 function computefundamental(p1::Array{Float64,2},p2::Array{Float64,2})
   # build homog. lin. eq. system
-  # TODO: draw 8pts at random or just take whatever pts?
-  A = zeros(8,9);
-  indices = collect(1:8);
-  for i=1:8
-    x = p1[1,indices[i]]
-    x_d = p2[1,indices[i]]
-    y = p1[2,indices[i]]
-    y_d = p2[2,indices[i]]
+  num_p1 = size(p1, indmax(size(p1)))
+  num_p2 = size(p2, indmax(size(p2)))
+  @assert num_p1==num_p2 ["Num of p1 neq to num of p2!"]
+
+
+  A = zeros(num_p1,9);
+  for i=1:num_p1
+    x   = p1[1,i]
+    x_d = p2[1,i]
+    y   = p1[2,i]
+    y_d = p2[2,i]
     A[i,:] = [x*x_d y*x_d x_d x*y_d y*y_d y_d x y 1.0];
-    #A[i,:] = reshape(p2[:,i+8]*p1[:,i+8]',(1,9));
   end
 
   # solve using SVD (thin=false)
@@ -114,12 +116,12 @@ end
 #
 #---------------------------------------------------------
 function eightpoint(p1::Array{Float64,2},p2::Array{Float64,2})
-  p1cond, T1 = condition(p1[:,1:8]);
-  p2cond, T2 = condition(p2[:,1:8]);
-  @show p1cond
-  Fbar = computefundamental(p1cond,p2cond);
-  F = T2'*Fbar*T1;
+  p1cond, T1 = condition(p1);
+  p2cond, T2 = condition(p2);
 
+  Fbar = computefundamental(p1cond,p2cond);
+  #F = T2'*Fbar*T1;
+  F = T1'*Fbar*T2;
 
   @assert size(F) == (3,3)
   return F::Array{Float64,2}
@@ -144,18 +146,25 @@ end
 #     img       left image to be drawn on
 #
 #---------------------------------------------------------
-#function showepipolar(F::Array{Float64,2},points::Array{Float64,2},img::Array{Float64,3})
-function showepipolar(points1::Array{Float64,2},points2::Array{Float64,2},img1::Array{Float64,3},img2::Array{Float64,3})
+function showepipolar(F::Array{Float64,2},points::Array{Float64,2},img::Array{Float64,3})
   # l1 = F*x2 OR l2 = F' x1
+  num_pts = size(points1, indmax(size(points1)))
+  pts = Common.cart2hom(points')
+
+  epLine = F * pts
+  epLine = Common.hom2cart(epLine)
+  @show epLine, size(epLine)
+
+  # e x x
+  x = linspace(1,640)
 
   figure()
-  subplot(211)
-  PyPlot.imshow(img1)
-  PyPlot.scatter(points1[16,1],points1[16,2])
-  subplot(212)
-  PyPlot.imshow(img2)
-  PyPlot.scatter(points2[16,1],points2[16,2])
-
+  #subplot(211)
+  PyPlot.imshow(img)
+  for i=1:num_pts
+    y = epLine[1,i]*x+epLine[2,i]
+    PyPlot.plot(x,y)
+  end
 
   return nothing::Void
 end
@@ -177,16 +186,12 @@ end
 function computeresidual(p1::Array{Float64,2},p2::Array{Float64,2},F::Array{Float64,2})
   # 0 = p1' * F * p2 --> residuals are difference to 0
   # p1 expected in homogenous coords.: 3xN
-  # alternative residual:
-  # sum^i ( d(p2_i, F*p1_i)^2  +  d(p1_i, F'*p2_i)^2  )
+  num_pts = size(p1, indmax(size(p1)))
+  residual = zeros(num_pts,1)
 
-  amountPts = size(p1,2);
-  residual = zeros(amountPts,1);
-  for i=1:amountPts
-    residual[i] = (p1[:,i]' * F * p2[:,i])[1];
+  for i=1:num_pts
+    residual[i] =  (p1[:,i]' * F * p2[:,i])[1]
   end
-
-
 
   return residual::Array{Float64,2}
 end
